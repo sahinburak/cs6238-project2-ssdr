@@ -1,0 +1,45 @@
+http://www.herongyang.com/JDK/SSL-Socket-Make-Self-Signed-Certificates-Trusted.html
+
+-keypass is meant for the rsa cert
+-storepass is meant for the keystore file
+
+#Create key store for each entity
+keytool -genkey -alias server -keyalg RSA -keypass password -storepass password -keystore server.jks
+keytool -genkey -alias client1 -keyalg RSA -keypass password -storepass password -keystore client1.jks
+keytool -genkey -alias client2 -keyalg RSA -keypass password -storepass password -keystore client2.jks
+keytool -genkey -alias client3 -keyalg RSA -keypass password -storepass password -keystore client3.jks
+
+
+#Create CA
+openssl (generate CA, sign CSR)
+openssl genrsa -des3 -out root-ca.key 2048
+openssl req -new -x509 -days 3650 -key root-ca.key -out root-ca.crt
+
+
+#Sign Client Certs
+openssl x509 -req -in server.csr -CA root-ca.crt -CAkey root-ca.key -out server.crt -days 365 -CAcreateserial -CAserial root.seq
+openssl x509 -req -in client1.csr -CA root-ca.crt -CAkey root-ca.key -out client1.crt -days 365 -CAserial root.seq
+openssl x509 -req -in client2.csr -CA root-ca.crt -CAkey root-ca.key -out client2.crt -days 365 -CAserial root.seq
+openssl x509 -req -in client3.csr -CA root-ca.crt -CAkey root-ca.key -out client3.crt -days 365 -CAserial root.seq
+
+
+#Generate CSR for each entity
+keytool -certreq -alias server -keypass password -storepass password -keystore server.jks -file server.csr
+keytool -certreq -alias client1 -keypass password -storepass password -keystore client1.jks -file client1.csr
+keytool -certreq -alias client2 -keypass password -storepass password -keystore client2.jks -file client2.csr
+keytool -certreq -alias client3 -keypass password -storepass password -keystore client3.jks -file client3.csr
+
+#Trust CA Cert for each keystore
+keytool -importcert -alias rootCA -keypass password -file root-ca.crt -keystore client1.jks -storepass password
+keytool -importcert -alias rootCA -keypass password -file root-ca.crt -keystore client2.jks -storepass password
+keytool -importcert -alias rootCA -keypass password -file root-ca.crt -keystore client3.jks -storepass password
+keytool -importcert -alias rootCA -keypass password -file root-ca.crt -keystore server.jks -storepass password
+
+#Import Cert Signed by CA
+keytool -importcert -alias server_signed -keystore server.jks -keypass password -file server.crt -storepass password
+keytool -importcert -alias client1_signed -keystore client1.jks -keypass password -file client1.crt -storepass password
+keytool -importcert -alias client2_signed -keystore client2.jks -keypass password -file client2.crt -storepass password
+keytool -importcert -alias client3_signed -keystore client3.jks -keypass password -file client3.crt -storepass password
+
+
+keytool -import -trustcacerts -alias rootCA -file root-ca.crt -keystore ca.jks
